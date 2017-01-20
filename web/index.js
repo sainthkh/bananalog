@@ -1,8 +1,8 @@
 const fs = require('fs');
 const http = require('http');
-const url = require('url')
 
-let layout = fs.readFileSync(`./layout.html`).toString()
+let config = JSON.parse(fs.readFileSync(`./config.json`).toString())
+let layout = fs.readFileSync(`./themes/${config.theme}/layout.html`).toString()
 
 http.createServer((req, res) => {
 	switch(req.url) {
@@ -12,6 +12,8 @@ http.createServer((req, res) => {
 			return serveIndex(res)
 		case '/favicon.ico':
 			return serveFav(res)
+		case '/sync':
+			return sync(res)
 		default:
 			return servePosts(req.url, res)
 	}
@@ -21,19 +23,48 @@ http.createServer((req, res) => {
 	console.log('Server Running at http://127.0.0.1:5000');
 })
 .on('error', err => {
-	console.log('here')
 	console.log(err)
 })
 
 function serveStyle(res) {
-	var style = fs.readFileSync(`./style.css`).toString()
+	var style = fs.readFileSync(`./themes/${config.theme}/style.css`).toString()
 	res.writeHead(200, {"Content-Type": "text/css; charset=utf-8"})
 	res.write(style)
 	return res.end()
 }
 
 function serveIndex(res) {
+	let postPaths = fs.readFileSync('./list').toString().replace(/\r\n/g, '\n').split('\n').slice(0, 10)	
+	let postsHtml = postPaths.map(path => {
+		let text = fs.readFileSync(`./posts/${path}.md`).toString().slice(0, 100)
+		let title = text.substr(0, text.indexOf('\n'))
+		title = title.replace(/^\$\s*/, '')
+		let content = parse(text.substr(text.indexOf('\n')+1))
+		return [`<div class="post">`,
+			`<div><h1><a href="/${path}">${title}</a></h1></div>`,
+			`<div>${content}</div>`,
+			`</div>`].join('')
+	}).join('\n')
+	res.write(layout.replace('{{{title}}}', config.title).replace('{{{body}}}', postsHtml))
+	return res.end()
+}
 
+function sync(res) {
+	let posts = fs.readFileSync('./list').toString().split('\n')
+	let dir = fs.readdirSync('./posts')
+	let newPosts = []
+	for(let i = 0; i < dir.length; i++) {
+		let fileName = dir[i].substr(0, dir[i].indexOf('.'))
+		if(posts.indexOf(fileName) == -1) {
+			newPosts.push(fileName)
+		}
+	}
+	if(newPosts.length > 0) {
+		fs.writeFileSync('./list', newPosts.join('\n') + '\n' + posts.join('\n'))
+	}
+	res.writeHead(200, {"Content-Type": "text/html; charset=utf-8"})
+	res.write('Sync done.')
+	return res.end()
 }
 
 function serveFav(res) {
@@ -42,9 +73,11 @@ function serveFav(res) {
 
 function servePosts(url, res) {
 	try {
-		var post = fs.readFileSync(`./posts/${url}.html`).toString()
+		var post = fs.readFileSync(`./posts/${url}.md`).toString()
 		res.writeHead(200, {"Content-Type": "text/html; charset=utf-8"})
-		res.write(layout.replace('{{{body}}}', parse(post)))
+		let html = layout.replace('{{{body}}}', `<div class="content">${parse(post)}</div>`)
+		html = html.replace('{{{title}}}', `${post.match(/\$(.*)/)[1]} | ${config.title}`)
+		res.write(html)
 	}
 	catch(e) {
 		console.log(e)
@@ -62,6 +95,7 @@ function parse(text) {
 		[/##(.*)/, '<h2>$1</h2>'],
 		[/#(.*)/, '<h1>$1</h1>'],
 		[/!\[(.*)\]\((.*)\)/, '<img alt="$1" src="$2" />'],
+		[/^\s*$/, ''],
 		[/(.*)/, '<p>$1</p>'],
 	]
 	text = lines.map((line) => {
