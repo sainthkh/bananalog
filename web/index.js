@@ -40,13 +40,14 @@ function serveStyle(res) {
 function serveIndex(res) {
 	let postPaths = fs.readFileSync('./list').toString().replace(/\r\n/g, '\n').split('\n').slice(0, 10)	
 	let postsHtml = postPaths.map(path => {
-		let text = fs.readFileSync(`./posts/${path}.md`).toString().slice(0, 100)
+		let text = fs.readFileSync(`./posts/${path}.md`).toString().slice(0, 500)
 		let title = text.substr(0, text.indexOf('\n'))
 		title = title.replace(/^\$\s*/, '')
-		let content = parse(text.substr(text.indexOf('\n')+1))
+		let content = parse(text.substr(text.indexOf('\n')+1) + '...')
 		return [`<div class="post">`,
 			`<div><h1><a href="/${path}">${title}</a></h1></div>`,
-			`<div>${content}</div>`,
+			`<div class="post-content">${content}</div>`,
+			`<div class="read-more-btn"><a href="/${path}">read more</a></div>`,
 			`</div>`].join('')
 	}).join('\n')
 	res.write(layout.replace('{{{title}}}', config.title).replace('{{{body}}}', postsHtml))

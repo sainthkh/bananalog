@@ -47,6 +47,28 @@ body {
 	color: darkslateblue;
 }
 
+.post-content {
+	margin-top: 10px;
+}
+
+.post-content h1 {
+	font-size: 1rem;
+	border-bottom: none;
+}
+
+.read-more-btn a{
+	display: inline-block;
+	padding: 5px 15px;
+	background: indigo;
+	color: white;
+	text-decoration: none;
+	margin-bottom: 15px;
+}
+
+.read-more-btn a:hover {
+	background: #6f159f;
+}
+
 .content {
 	padding: 0 1.5rem;
 
