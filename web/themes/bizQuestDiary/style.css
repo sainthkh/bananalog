@@ -49,6 +49,9 @@ body {
 
 .content {
 	padding: 0 1.5rem;
+
+	border-bottom: 1px dotted #aaa;
+	margin-bottom: 1.5rem;
 }
 
 .title {
@@ -58,6 +61,28 @@ body {
 	margin-top: -1.5rem;
 	margin-bottom: 1rem;
 	text-align: center;
+}
+
+.description {
+	margin-left: 8px;
+	font-size: 0.8rem;
+}
+
+.signup-form {
+	padding: 16px;
+	border-radius: 0.5rem;
+
+	background: darkslateblue;
+	color: white;
+}
+
+.signup-cta {
+	font-size: 1.2rem;
+	margin-bottom: 16px;
+}
+
+input {
+	font-size: 1.2rem;	
 }
 
 @media(min-width: 960px) {

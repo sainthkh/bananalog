@@ -91,7 +91,7 @@ function subscribe(req, res) {
 		});
 	}
 	res.writeHead(200, {"Content-Type": "text/html; charset=utf-8"})
-	res.write(`<h1>Thank you for subscription. I'll talk to you soon. </h1>`)
+	res.write(`<h1>Thank you for subscription. Welcome email has been sent to you.</h1>`)
 	return res.end()
 }
 
@@ -124,6 +124,8 @@ function addSubscriber(email, firstName) {
 	req.end()
 }
 
+let emailContent = fs.readFileSync(`./themes/${config.theme}/email.html`).toString()
+
 function sendWelcomeMail(email, firstName) {
 	let payload = qs.stringify({
 		from: config.from,
@@ -131,12 +133,7 @@ function sendWelcomeMail(email, firstName) {
 		subject: "Thank you for subscription",
 		html: [
 			`<div style="color:#222222;font-family:'Helvetica','Arial',sans-serif;font-size:14px;line-height:1.4;padding:25px;width:550px">`,
-			`<p style="margin-bottom:16px">Hello, ${firstName}.</p>`,
-			`<p style="margin-bottom:16px">As we all know, it's not a good idea to get email address by just telling the readers "enter your email address if you want updates".</p>`,
-			`<p style="margin-bottom:16px">However, you signed up. Thank you for that. It seems that you really care my contents.</p>`,
-			`<p style="margin-bottom:16px">I will try my best to share my journey with you.</p>`,
-			`<p style="margin-bottom:16px">Sincerely,<br>`,
-			`Kukhyeon</p>`,
+			emailContent.replace('${firstName}', firstName),
 			`</div>`,
 			`<div style="border-top-color:#ddd;border-top-style:solid;border-top-width:1px;color:#888;font-family:'Helvetica','Arial',sans-serif;font-size:12px;line-height:1.4;padding:25px;width:550px">`,
 			`To make sure you keep getting these emails, please add admin@${config.domain} to your address book or whitelist us.<br>`,
