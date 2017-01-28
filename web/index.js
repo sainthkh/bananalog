@@ -4,18 +4,9 @@ const https = require('https')
 const qs = require('querystring')
 
 let config = JSON.parse(fs.readFileSync(`./config.json`).toString())
-let layout = fs.readFileSync(`./themes/${config.theme}/layout.html`).toString()
 
 http.createServer((req, res) => {
 	switch(req.url) {
-		case '/style.css':
-			return serveStyle(res)
-		case '/':
-			return serveIndex(res)
-		case '/favicon.ico':
-			return serveFav(res)
-		case '/sync':
-			return sync(res)
 		case '/subscribe':
 			return subscribe(req, res)
 		default:
@@ -29,48 +20,6 @@ http.createServer((req, res) => {
 .on('error', err => {
 	console.log(err)
 })
-
-function serveStyle(res) {
-	var style = fs.readFileSync(`./themes/${config.theme}/style.css`).toString()
-	res.writeHead(200, {"Content-Type": "text/css; charset=utf-8"})
-	res.write(style)
-	return res.end()
-}
-
-function serveIndex(res) {
-	let postPaths = fs.readFileSync('./list').toString().replace(/\r\n/g, '\n').split('\n').slice(0, 10)	
-	let postsHtml = postPaths.map(path => {
-		let text = fs.readFileSync(`./posts/${path}.md`).toString().slice(0, 500)
-		let title = text.substr(0, text.indexOf('\n'))
-		title = title.replace(/^\$\s*/, '')
-		let content = parse(text.substr(text.indexOf('\n')+1) + '...')
-		return [`<div class="post">`,
-			`<div><h1><a href="/${path}">${title}</a></h1></div>`,
-			`<div class="post-content">${content}</div>`,
-			`<div class="read-more-btn"><a href="/${path}">read more</a></div>`,
-			`</div>`].join('')
-	}).join('\n')
-	res.write(layout.replace('{{{title}}}', config.title).replace('{{{body}}}', postsHtml))
-	return res.end()
-}
-
-function sync(res) {
-	let posts = fs.readFileSync('./list').toString().split('\n')
-	let dir = fs.readdirSync('./posts')
-	let newPosts = []
-	for(let i = 0; i < dir.length; i++) {
-		let fileName = dir[i].substr(0, dir[i].indexOf('.'))
-		if(posts.indexOf(fileName) == -1) {
-			newPosts.push(fileName)
-		}
-	}
-	if(newPosts.length > 0) {
-		fs.writeFileSync('./list', newPosts.join('\n') + '\n' + posts.join('\n'))
-	}
-	res.writeHead(200, {"Content-Type": "text/html; charset=utf-8"})
-	res.write('Sync done.')
-	return res.end()
-}
 
 function subscribe(req, res) {
 	if (req.method == 'POST') {
