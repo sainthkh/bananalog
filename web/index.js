@@ -10,9 +10,8 @@ http.createServer((req, res) => {
 		case '/subscribe':
 			return subscribe(req, res)
 		default:
-			return servePosts(req.url, res)
+			res.end()
 	}
-	
 })
 .listen(5000, function () {
 	console.log('Server Running at http://127.0.0.1:5000');
@@ -40,8 +39,6 @@ function subscribe(req, res) {
 			sendWelcomeMail(email, firstName)
 		});
 	}
-	res.writeHead(200, {"Content-Type": "text/html; charset=utf-8"})
-	res.write(`<h1>Thank you for subscription. Welcome email has been sent to you.</h1>`)
 	return res.end()
 }
 
@@ -115,49 +112,4 @@ function sendWelcomeMail(email, firstName) {
 
 	req.write(payload)
 	req.end()
-}
-
-function serveFav(res) {
-	return res.end()
-}
-
-function servePosts(url, res) {
-	try {
-		var post = fs.readFileSync(`./posts/${url}.md`).toString()
-		res.writeHead(200, {"Content-Type": "text/html; charset=utf-8"})
-		let html = layout.replace('{{{body}}}', `<div class="content">${parse(post)}</div>`)
-		html = html.replace('{{{title}}}', `${post.match(/\$(.*)/)[1]} | ${config.title}`)
-		res.write(html)
-	}
-	catch(e) {
-		console.log(e)
-		res.writeHead(404, {"Content-Type": "text/html; charset=utf-8"})
-	}
-	res.end()
-}
-
-function parse(text) {
-	let lines = text.replace(/\r\n/, '\n').split('\n')
-
-	let title = lines.shift()
-	title = title.replace(/\$(.*)\n?/, '<div class="title">$1</div>') 
-	let rules = [
-		[/##(.*)/, '<h2>$1</h2>'],
-		[/#(.*)/, '<h1>$1</h1>'],
-		[/!\[(.*)\]\((.*)\)/, '<img alt="$1" src="$2" />'],
-		[/^\s*$/, ''],
-		[/(.*)/, '<p>$1</p>'],
-	]
-	text = lines.map((line) => {
-		for(let i = 0; i < rules.length; i++) {
-			if (line.match(rules[i][0])) {
-				line = line.replace(rules[i][0], rules[i][1])
-				break;
-			}
-		}
-		line = line.replace(/\[(.*)\]\((.*)\)/, '<a href="$2">$1</a>')
-		return line
-	}).join('\n')
-
-	return title + text
 }
