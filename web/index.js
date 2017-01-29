@@ -34,24 +34,27 @@ function subscribe(req, res) {
 		});
 
 		req.on('end', function () {
-			let { email, firstName } = qs.parse(body);
-			addSubscriber(email, firstName)
-			sendWelcomeMail(email, firstName)
+			let { list, email, firstName } = qs.parse(body);
+			
+			addSubscriber(list, email, firstName)
+			sendWelcomeMail(list, email, firstName)
 		});
 	}
 	return res.end()
 }
 
-function addSubscriber(email, firstName) {
+function addSubscriber(list, email, firstName) {
 	let payload = qs.stringify({
 		address: email,
 		name: firstName,
+		subscribed: "yes",
+		upsert: "yes",
 	})
 
 	let req = https.request({
 		host: "api.mailgun.net",
 		port: 443,
-		path: `/v3/lists/all@${config.domain}/members`,
+		path: `/v3/lists/${list}/members`,
 		auth: `api:${config.key}`,
 		method: "POST",
 		headers: {
@@ -71,11 +74,12 @@ function addSubscriber(email, firstName) {
 	req.end()
 }
 
-let emailContent = fs.readFileSync(`./themes/${config.theme}/email.html`).toString()
-
-function sendWelcomeMail(email, firstName) {
+function sendWelcomeMail(list, email, firstName) {
+	let emailContent = fs.readFileSync(`./email/${list}/welcome.html`).toString()
+	
+	let domain = list.split('@')[1]
 	let payload = qs.stringify({
-		from: config.from,
+		from: config[domain].from,
 		to: email,
 		subject: "Thank you for subscription",
 		html: [
@@ -83,10 +87,9 @@ function sendWelcomeMail(email, firstName) {
 			emailContent.replace('${firstName}', firstName),
 			`</div>`,
 			`<div style="border-top-color:#ddd;border-top-style:solid;border-top-width:1px;color:#888;font-family:'Helvetica','Arial',sans-serif;font-size:12px;line-height:1.4;padding:25px;width:550px">`,
-			`To make sure you keep getting these emails, please add admin@${config.domain} to your address book or whitelist us.<br>`,
-			`Want out of the this email list? <a href="%mailing_list_unsubscribe_url%">Unsubscribe this list</a><br>`,		
-			`Want to unsubscribe every email? <a href="%unsubscribe_url%">Click here</a><br>`,
-			`Postal Address: ${config.postalAddress}`,
+			`To make sure you keep getting these emails, please add admin@${domain} to your address book or whitelist us.<br>`,
+			`Want out of the this email list? <a href="http://${domain}/unsubscribe?${qs.stringify({list, email})}">Unsubscribe this list</a><br>`,		
+			`Postal Address: ${config[domain].postalAddress}`,
 			`</div>`
 		].join(``),
 	})
@@ -94,7 +97,7 @@ function sendWelcomeMail(email, firstName) {
 	let req = https.request({
 		host: "api.mailgun.net",
 		port: 443,
-		path: `/v3/${config.domain}/messages`,
+		path: `/v3/${domain}/messages`,
 		auth: `api:${config.key}`,
 		method: "POST",
 		headers: {

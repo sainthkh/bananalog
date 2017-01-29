@@ -1,6 +1,7 @@
 {
 	"key": "",
-	"from": "",
-	"domain": "",
-	"postalAddress": ""
+	"list@domain": {
+		"from": "",
+		"postalAddress": ""
+	}
 }
