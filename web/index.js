@@ -6,9 +6,12 @@ const qs = require('querystring')
 let config = JSON.parse(fs.readFileSync(`./config.json`).toString())
 
 http.createServer((req, res) => {
-	switch(req.url) {
+	let url = require('url').parse(req.url, true)
+	switch(url.pathname) {
 		case '/subscribe':
 			return subscribe(req, res)
+		case '/unsubscribe':
+			return unsubscribe(req, res, url.query)
 		default:
 			res.end()
 	}
@@ -100,6 +103,41 @@ function sendWelcomeMail(list, email, firstName) {
 		path: `/v3/${domain}/messages`,
 		auth: `api:${config.key}`,
 		method: "POST",
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			'Content-Length': Buffer.byteLength(payload),
+		}
+	}, (res) => {
+		console.log('STATUS: ' + res.statusCode);
+		console.log('HEADERS: ' + JSON.stringify(res.headers));
+		res.setEncoding('utf8');
+		res.on('data', function (chunk) {
+			console.log('BODY: ' + chunk);
+		});
+	})
+
+	req.write(payload)
+	req.end()
+}
+
+function unsubscribe(req, res, query) {
+	unsubscribeUser(query.list, query.email)
+	res.writeHead(200, {"Content-Type": "text/html; charset=utf-8"})
+	res.write(`Successfully unsubscribed from the list.`)
+	res.end()
+}
+
+function unsubscribeUser(list, email) {
+	let payload = qs.stringify({
+		subscribed: "no",
+	})
+
+	let req = https.request({
+		host: "api.mailgun.net",
+		port: 443,
+		path: `/v3/lists/${list}/members/${email}`,
+		auth: `api:${config.key}`,
+		method: "PUT",
 		headers: {
 			'Content-Type': 'application/x-www-form-urlencoded',
 			'Content-Length': Buffer.byteLength(payload),
