@@ -39,8 +39,10 @@ function subscribe(req, res) {
 		req.on('end', function () {
 			let { list, email, firstName } = qs.parse(body);
 			
-			addSubscriber(list, email, firstName)
-			sendWelcomeMail(list, email, firstName)
+			removeIfUnsubscribed(list, email, () => {
+				addSubscriber(list, email, firstName)
+				sendWelcomeMail(list, email, firstName)
+			})
 		});
 	}
 	return res.end()
@@ -57,7 +59,7 @@ function addSubscriber(list, email, firstName) {
 	let req = https.request({
 		host: "api.mailgun.net",
 		port: 443,
-		path: `/v3/lists/${list}/members`,
+		path: `/v3/lists/${qs.escape(list)}/members`,
 		auth: `api:${config.key}`,
 		method: "POST",
 		headers: {
@@ -80,7 +82,7 @@ function addSubscriber(list, email, firstName) {
 function sendWelcomeMail(list, email, firstName) {
 	let emailContent = fs.readFileSync(`./email/${list}/welcome.html`).toString()
 	
-	let domain = list.split('@')[1]
+	let domain = getDomain(list)
 	let payload = qs.stringify({
 		from: config[domain].from,
 		to: email,
@@ -135,7 +137,7 @@ function unsubscribeUser(list, email) {
 	let req = https.request({
 		host: "api.mailgun.net",
 		port: 443,
-		path: `/v3/lists/${list}/members/${email}`,
+		path: `/v3/lists/${qs.escape(list)}/members/${qs.escape(email)}`,
 		auth: `api:${config.key}`,
 		method: "PUT",
 		headers: {
@@ -153,4 +155,30 @@ function unsubscribeUser(list, email) {
 
 	req.write(payload)
 	req.end()
+}
+
+function removeIfUnsubscribed(list, email, done) {
+	let domain = getDomain(list)
+
+	let req = https.request({
+		host: "api.mailgun.net",
+		port: 443,
+		path: `/v3/${domain}/unsubscribes/${qs.escape(email)}`,
+		auth: `api:${config.key}`,
+		method: "DELETE",
+	}, (res) => {
+		console.log('STATUS: ' + res.statusCode);
+		console.log('HEADERS: ' + JSON.stringify(res.headers));
+		res.setEncoding('utf8');
+		res.on('data', function (chunk) {
+			console.log('BODY: ' + chunk);
+		});
+		done()
+	})
+
+	req.end()
+}
+
+function getDomain(list) {
+	return list.split('@')[1]
 }
